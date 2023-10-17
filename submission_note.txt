@@ -1,0 +1,10 @@
+The automated grader system apparently does not work with Rust.
+
+I had to compile a statically-linked Rust binary and use a Python wrapper to invoke the program.
+
+To compile the Rust binary:
+
+RUSTFLAGS='-C linker=ld.lld -C relocation-model=static -C strip=symbols' cargo build --release --target x86_64-unknown-linux-musl
+
+VMTranslator.py is the wrapper.
+
