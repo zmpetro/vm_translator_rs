@@ -192,11 +192,12 @@ mod translator {
             }
         }
 
-        fn add_instr(&mut self, instr: &str) {
-            self.asm.push(instr.to_owned());
+        fn add_instr<Instr: Into<String>>(&mut self, instr: Instr) {
+            let instr = instr.into();
             if instr.chars().next().unwrap() != '(' {
                 self.next_instr += 1;
             }
+            self.asm.push(instr);
         }
 
         fn const_instr_to_vec(&mut self, const_instr: &'static [&str]) {
@@ -256,8 +257,8 @@ mod translator {
             self.add_instr("D=M-D");
             self.add_instr("M=-1");
             // next_instr + 5 is how many instructions until the end of the current asm block
-            self.add_instr(&format!("@{}", self.next_instr + 5));
-            self.add_instr(&format!("D;{}", jmp_instr));
+            self.add_instr(format!("@{}", self.next_instr + 5));
+            self.add_instr(format!("D;{}", jmp_instr));
             self.add_instr("@SP");
             self.add_instr("A=M-1");
             self.add_instr("M=0");
@@ -265,9 +266,9 @@ mod translator {
 
         fn basic_pop(&mut self, segment: &MemorySegment, idx: &u16) {
             let seg_ptr = segment.seg_ptr();
-            self.add_instr(&format!("@{idx}"));
+            self.add_instr(format!("@{idx}"));
             self.add_instr("D=A");
-            self.add_instr(&format!("@{seg_ptr}"));
+            self.add_instr(format!("@{seg_ptr}"));
             self.add_instr("D=D+M");
             self.add_instr("@SP");
             self.add_instr("AM=M-1");
@@ -280,7 +281,7 @@ mod translator {
             self.add_instr("@SP");
             self.add_instr("AM=M-1");
             self.add_instr("D=M");
-            self.add_instr(&format!("@{mem_addr}"));
+            self.add_instr(format!("@{mem_addr}"));
             self.add_instr("M=D");
         }
 
@@ -293,7 +294,7 @@ mod translator {
             self.add_instr("@SP");
             self.add_instr("AM=M-1");
             self.add_instr("D=M");
-            self.add_instr(&format!("@{seg_ptr}"));
+            self.add_instr(format!("@{seg_ptr}"));
             self.add_instr("M=D");
         }
 
@@ -301,12 +302,12 @@ mod translator {
             self.add_instr("@SP");
             self.add_instr("AM=M-1");
             self.add_instr("D=M");
-            self.add_instr(&format!("@{}.{}", self.static_base, idx));
+            self.add_instr(format!("@{}.{}", self.static_base, idx));
             self.add_instr("M=D");
         }
 
         fn push_const(&mut self, idx: &u16) {
-            self.add_instr(&format!("@{idx}"));
+            self.add_instr(format!("@{idx}"));
             self.add_instr("D=A");
             self.add_instr("@SP");
             self.add_instr("M=M+1");
@@ -316,9 +317,9 @@ mod translator {
 
         fn basic_push(&mut self, segment: &MemorySegment, idx: &u16) {
             let seg_ptr = segment.seg_ptr();
-            self.add_instr(&format!("@{idx}"));
+            self.add_instr(format!("@{idx}"));
             self.add_instr("D=A");
-            self.add_instr(&format!("@{seg_ptr}"));
+            self.add_instr(format!("@{seg_ptr}"));
             self.add_instr("A=D+M");
             self.add_instr("D=M");
             self.add_instr("@SP");
@@ -329,7 +330,7 @@ mod translator {
 
         fn push_temp(&mut self, idx: &u16) {
             let mem_addr = TEMP_OFFSET + idx;
-            self.add_instr(&format!("@{mem_addr}"));
+            self.add_instr(format!("@{mem_addr}"));
             self.add_instr("D=M");
             self.add_instr("@SP");
             self.add_instr("M=M+1");
@@ -343,7 +344,7 @@ mod translator {
                 1 => MemorySegment::That.seg_ptr(),
                 _ => panic!("push pointer instruction must have index 0 or 1"),
             };
-            self.add_instr(&format!("@{seg_ptr}"));
+            self.add_instr(format!("@{seg_ptr}"));
             self.add_instr("D=M");
             self.add_instr("@SP");
             self.add_instr("M=M+1");
@@ -352,7 +353,7 @@ mod translator {
         }
 
         fn push_static(&mut self, idx: &u16) {
-            self.add_instr(&format!("@{}.{}", self.static_base, idx));
+            self.add_instr(format!("@{}.{}", self.static_base, idx));
             self.add_instr("D=M");
             self.add_instr("@SP");
             self.add_instr("M=M+1");
@@ -361,11 +362,11 @@ mod translator {
         }
 
         fn label_fn(&mut self, label: &str) {
-            self.add_instr(&format!("({label})"));
+            self.add_instr(format!("({label})"));
         }
 
         fn goto(&mut self, label: &str) {
-            self.add_instr(&format!("@{label}"));
+            self.add_instr(format!("@{label}"));
             self.add_instr("0;JMP");
         }
 
@@ -373,12 +374,12 @@ mod translator {
             self.add_instr("@SP");
             self.add_instr("AM=M-1");
             self.add_instr("D=M");
-            self.add_instr(&format!("@{label}"));
+            self.add_instr(format!("@{label}"));
             self.add_instr("D;JNE");
         }
 
         fn function(&mut self, name: &str, num_local_vars: u16) {
-            self.add_instr(&format!("({name})"));
+            self.add_instr(format!("({name})"));
             for _ in 0..num_local_vars {
                 self.add_instr("@SP");
                 self.add_instr("M=M+1");
@@ -390,7 +391,7 @@ mod translator {
         fn call(&mut self, name: &str, num_args: u16) {
             let return_addr_label = format!("{}$ret.{}", name, self.call_counter);
             let arg_offset = 5 + num_args;
-            self.add_instr(&format!("@{return_addr_label}"));
+            self.add_instr(format!("@{return_addr_label}"));
             self.add_instr("D=A");
             self.add_instr("@SP");
             self.add_instr("M=M+1");
@@ -420,7 +421,7 @@ mod translator {
             self.add_instr("M=M+1");
             self.add_instr("A=M-1");
             self.add_instr("M=D");
-            self.add_instr(&format!("@{arg_offset}"));
+            self.add_instr(format!("@{arg_offset}"));
             self.add_instr("D=A");
             self.add_instr("@SP");
             self.add_instr("D=M-D");
@@ -430,9 +431,9 @@ mod translator {
             self.add_instr("D=M");
             self.add_instr("@LCL");
             self.add_instr("M=D");
-            self.add_instr(&format!("@{name}"));
+            self.add_instr(format!("@{name}"));
             self.add_instr("0;JMP");
-            self.add_instr(&format!("({return_addr_label})"));
+            self.add_instr(format!("({return_addr_label})"));
             self.call_counter += 1;
         }
 
