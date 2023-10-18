@@ -185,10 +185,10 @@ mod translator {
     impl Translator {
         pub fn new(static_base: String) -> Self {
             Self {
-                next_instr: 0,
-                call_counter: 0,
                 static_base: static_base,
                 asm: vec![],
+                next_instr: 0,
+                call_counter: 0,
             }
         }
 
