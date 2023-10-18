@@ -276,6 +276,7 @@ mod translator {
             self.add_instr("A=D-M");
             self.add_instr("M=D-A");
         }
+
         fn pop_temp(&mut self, idx: &u16) {
             let mem_addr = TEMP_OFFSET + idx;
             self.add_instr("@SP");
