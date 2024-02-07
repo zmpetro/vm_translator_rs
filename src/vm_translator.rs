@@ -180,6 +180,7 @@ mod translator {
         pub asm: Vec<String>,
         next_instr: u16,
         call_counter: u16,
+        cur_function: String,
     }
 
     impl Translator {
@@ -189,6 +190,7 @@ mod translator {
                 asm: vec![],
                 next_instr: 0,
                 call_counter: 0,
+                cur_function: String::new(),
             }
         }
 
@@ -363,11 +365,11 @@ mod translator {
         }
 
         fn label_fn(&mut self, label: &str) {
-            self.add_instr(format!("({label})"));
+            self.add_instr(format!("({}${})", self.cur_function, label));
         }
 
         fn goto(&mut self, label: &str) {
-            self.add_instr(format!("@{label}"));
+            self.add_instr(format!("@{}${}", self.cur_function, label));
             self.add_instr("0;JMP");
         }
 
@@ -375,11 +377,12 @@ mod translator {
             self.add_instr("@SP");
             self.add_instr("AM=M-1");
             self.add_instr("D=M");
-            self.add_instr(format!("@{label}"));
+            self.add_instr(format!("@{}${}", self.cur_function, label));
             self.add_instr("D;JNE");
         }
 
         fn function(&mut self, name: &str, num_local_vars: u16) {
+            self.cur_function = name.to_owned();
             self.add_instr(format!("({name})"));
             for _ in 0..num_local_vars {
                 self.add_instr("@SP");
